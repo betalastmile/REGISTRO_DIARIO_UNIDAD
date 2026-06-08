@@ -1,0 +1,829 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Registro Diario de Flotila</title>
+
+<style>
+*{box-sizing:border-box;margin:0;padding:0}
+body{font-family:Arial,sans-serif;background:linear-gradient(135deg,#f4fdf4,#e8f5e9);padding:20px}
+header{background:linear-gradient(135deg,#00a64f,#008c42);padding:25px;text-align:center;color:#fff;font-size:26px;font-weight:bold;border-radius:10px 10px 0 0}
+.container{max-width:700px;margin:auto;background:#fff;padding:30px;border-radius:0 0 10px 10px}
+.form-section{margin-bottom:25px;padding:20px;background:#f9f9f9;border-radius:8px;border-left:4px solid #00a64f}
+label{display:block;margin-top:15px;font-weight:bold;color:#006b37}
+input,textarea,select{width:100%;padding:12px;border:2px solid #00a64f;border-radius:6px}
+input[type=file]{border:2px dashed #00a64f;background:#f9f9f9}
+.file-preview{display:none;margin-top:10px}
+.file-preview img{max-width:150px;border-radius:8px;border:2px solid #00a64f}
+button{margin-top:25px;width:100%;padding:15px;background:#00a64f;border:none;color:#fff;font-size:18px;border-radius:8px;cursor:pointer}
+button:disabled{background:#aaa;cursor:not-allowed}
+
+/* ── BOTONES INICIO / FIN ── */
+.mov-buttons{display:flex;gap:12px;margin-top:8px}
+.mov-btn{flex:1;margin-top:0;padding:18px 10px;font-size:17px;font-weight:bold;border-radius:10px;border:3px solid transparent;cursor:pointer;transition:all 0.2s;}
+.mov-btn-inicio{background:#e8f5e9;color:#2e7d32;border-color:#2e7d32}
+.mov-btn-fin{background:#fce4ec;color:#c62828;border-color:#c62828}
+.mov-btn.activo.mov-btn-inicio{background:#00a64f;color:#fff;border-color:#00a64f;box-shadow:0 4px 12px rgba(0,166,79,0.4)}
+.mov-btn.activo.mov-btn-fin{background:#e53935;color:#fff;border-color:#e53935;box-shadow:0 4px 12px rgba(229,57,53,0.4)}
+.mov-btn:disabled{background:#e0e0e0!important;color:#aaa!important;border-color:#ccc!important;box-shadow:none!important;cursor:not-allowed!important;opacity:0.6}
+.mov-error{display:none;color:#d32f2f;font-size:13px;font-weight:bold;margin-top:6px}
+.mov-error.show{display:block}
+.required{color:#d32f2f}
+.permissions-warning{display:none;background:#fff3cd;border:1px solid #ffc107;color:#856404;padding:15px;border-radius:8px;margin-bottom:15px}
+.permissions-warning.show{display:block}
+#respuesta{margin-top:20px;padding:15px;border-radius:8px;font-weight:bold;text-align:center;display:none}
+#respuesta.success{background:#d4edda;color:#155724;display:block}
+#respuesta.error{background:#f8d7da;color:#721c24;display:block}
+.autocomplete-container{position:relative}
+.autocomplete-list{position:absolute;top:100%;left:0;right:0;max-height:200px;overflow-y:auto;background:#fff;border:2px solid #00a64f;border-top:none;border-radius:0 0 6px 6px;z-index:100;display:none}
+.autocomplete-item{padding:12px;cursor:pointer;border-bottom:1px solid #e0e0e0}
+.autocomplete-item:hover{background:#e8f5e9}
+.autocomplete-item:last-child{border-bottom:none}
+.placa-no-encontrada{display:none;margin-top:8px;padding:10px 14px;background:#fdecea;border:2px solid #e53935;border-radius:6px;color:#b71c1c;font-weight:bold;font-size:14px}
+.placa-no-encontrada.show{display:flex;align-items:center;gap:8px}
+.placa-counter{font-size:12px;color:#888;text-align:right;margin-top:4px}
+.placa-counter.lleno{color:#e53935;font-weight:bold}
+.tiempo-uso{background:#fff9c4;border:2px solid #fbc02d;padding:20px;border-radius:8px;margin-top:20px;display:none}
+.tiempo-uso h3{color:#f57f17;margin-bottom:10px;font-size:20px}
+.tiempo-uso .detalle{font-size:16px;margin:8px 0;color:#333}
+.tiempo-uso .detalle strong{color:#f57f17}
+.tiempo-uso .destacado{font-size:24px;font-weight:bold;color:#e65100;margin-top:15px;padding:10px;background:#fff;border-radius:6px;text-align:center}
+
+/* ── TIENDA BUSCADOR ── */
+.tienda-container{position:relative}
+.tienda-search-wrap{position:relative}
+.tienda-search-wrap input{padding-right:36px;}
+.tienda-search-icon{position:absolute;right:12px;top:50%;transform:translateY(-50%);color:#00a64f;font-size:16px;pointer-events:none;}
+.tienda-list{position:absolute;top:100%;left:0;right:0;max-height:220px;overflow-y:auto;background:#fff;border:2px solid #00a64f;border-top:none;border-radius:0 0 8px 8px;z-index:200;display:none;box-shadow:0 4px 12px rgba(0,166,79,0.15);}
+.tienda-list.show{display:block}
+.tienda-item{padding:12px 14px;cursor:pointer;border-bottom:1px solid #e8f5e9;font-size:15px;color:#333;transition:background 0.15s;}
+.tienda-item:hover,.tienda-item.selected-item{background:#e8f5e9;color:#006b37;font-weight:bold}
+.tienda-item:last-child{border-bottom:none}
+.tienda-item mark{background:#c8f7dc;color:#005c2e;border-radius:2px;padding:0 2px}
+.tienda-selected{display:none;margin-top:6px;padding:8px 12px;background:#e8f5e9;border:2px solid #00a64f;border-radius:6px;color:#006b37;font-size:14px;font-weight:bold;align-items:center;justify-content:space-between;gap:8px;}
+.tienda-selected.show{display:flex}
+.tienda-selected button{margin:0;width:auto;padding:4px 10px;font-size:12px;border-radius:4px;background:#e53935;}
+.tienda-no-result{padding:12px 14px;color:#888;font-style:italic;font-size:14px;}
+#inputTiendaHidden{display:none !important}
+
+/* ── ESTADO PLACA ── */
+#estadoPlacaInfo{display:none;margin-top:8px;padding:10px 14px;border-radius:6px;font-size:14px;font-weight:bold;align-items:center;gap:8px}
+#estadoPlacaInfo.show{display:flex}
+#estadoPlacaInfo.estado-inicio{background:#fff3e0;border:2px solid #fb8c00;color:#e65100}
+#estadoPlacaInfo.estado-libre{background:#e8f5e9;border:2px solid #43a047;color:#2e7d32}
+#estadoPlacaInfo.estado-cargando{background:#e3f2fd;border:2px solid #1e88e5;color:#1565c0}
+
+/* Spinner */
+.select-loading{color:#888;font-size:13px;margin-top:4px;display:none}
+.select-loading.show{display:block}
+
+/* ── BARRA DE PROGRESO ── */
+#progressWrap{display:none;margin-top:20px;background:#e8f5e9;border:1px solid #00a64f;border-radius:10px;padding:16px 20px;}
+#progressWrap.show{display:block}
+#progressLabel{font-size:14px;font-weight:bold;color:#006b37;margin-bottom:8px;text-align:center;}
+#progressBar{width:100%;height:22px;background:#c8e6c9;border-radius:20px;overflow:hidden;}
+#progressFill{height:100%;width:0%;background:linear-gradient(90deg,#00a64f,#00c060);border-radius:20px;transition:width 0.4s ease;position:relative;overflow:hidden;}
+#progressFill::after{content:'';position:absolute;top:0;left:-60%;width:50%;height:100%;background:rgba(255,255,255,0.35);transform:skewX(-20deg);animation:shimmer 1.2s infinite;}
+@keyframes shimmer{0%{left:-60%}100%{left:120%}}
+#progressPct{text-align:center;font-size:13px;color:#00695c;font-weight:bold;margin-top:6px;}
+</style>
+</head>
+
+<body>
+
+<header>🚗 Registro de Recepción / Entrega de Vehículos</header>
+
+<div class="container">
+
+<div class="permissions-warning show" id="gpsWarning">
+  <strong>📍 Permiso de ubicación requerido</strong>
+  <p>Esta app necesita tu ubicación GPS para registrar el movimiento.</p>
+  <p style="margin-top:10px">
+    <button type="button" id="btnPedirGPS" style="margin-top:0;width:auto;padding:10px 20px;font-size:15px;background:#00a64f;border-radius:6px;border:none;color:#fff;cursor:pointer">
+      📍 Permitir ubicación
+    </button>
+  </p>
+  <p id="gpsEstado" style="margin-top:8px;font-size:13px;color:#856404"></p>
+</div>
+
+<form id="formDatos">
+
+<div class="form-section">
+<h3>📋 Información General</h3>
+
+<label>Movimiento <span class="required">*</span></label>
+<div class="mov-buttons">
+  <button type="button" class="mov-btn mov-btn-inicio" id="btnInicio" onclick="selMovimiento('INICIO')">🟢 INICIO</button>
+  <button type="button" class="mov-btn mov-btn-fin"   id="btnFin"    onclick="selMovimiento('FIN')">🔴 FIN</button>
+</div>
+<div class="mov-error" id="movError">Selecciona INICIO o FIN</div>
+<div id="estadoPlacaInfo"></div>
+<input type="hidden" name="movimiento" id="inputMovimiento">
+
+<label>Nombre <span class="required">*</span></label>
+<input name="nombre" required>
+
+<label>USUARIO BETA <span class="required">*</span></label>
+<input name="usuario" required placeholder="Ej. BMEXS0001">
+
+<!-- ── TIENDA: buscador + lista filtrada ── -->
+<label>Tienda <span class="required">*</span></label>
+<div class="tienda-container" id="tiendaContainer">
+  <div class="tienda-search-wrap">
+    <input
+      type="text"
+      id="inputBuscarTienda"
+      autocomplete="off"
+      placeholder="🔍 Buscar tienda..."
+    >
+    <span class="tienda-search-icon">🔍</span>
+  </div>
+  <div class="tienda-list" id="listaTiendas"></div>
+  <div class="tienda-selected" id="tiendaSeleccionada">
+    <span id="tiendaSeleccionadaTexto"></span>
+    <button type="button" id="btnClearTienda" title="Cambiar tienda">✕ Cambiar</button>
+  </div>
+  <input type="text" id="inputTiendaHidden" name="tienda" required readonly tabindex="-1">
+</div>
+<div class="select-loading" id="tiendasLoading">⏳ Cargando lista de tiendas...</div>
+
+<label>Placa <span class="required">*</span></label>
+<div class="autocomplete-container">
+  <input
+    name="placa"
+    id="inputPlaca"
+    required
+    style="text-transform:uppercase"
+    autocomplete="off"
+    placeholder="Max. 8 caracteres alfanumericos"
+    maxlength="8"
+    pattern="[A-Za-z0-9]{1,8}"
+    title="Solo letras y numeros, maximo 8 caracteres"
+  >
+  <div class="placa-counter" id="placaCounter">0 / 8 caracteres</div>
+  <div class="autocomplete-list" id="listaPlacas"></div>
+  <div class="placa-no-encontrada" id="placaNoEncontrada">
+    Placa no encontrada en el sistema
+  </div>
+</div>
+
+<label>Marca <span class="required">*</span></label>
+<input type="text" name="marca" id="inputMarca" readonly placeholder="Se llena al elegir placa" style="background:#f0f0f0;color:#555">
+
+<label>Submarca <span class="required">*</span></label>
+<input type="text" name="submarca" id="inputSubmarca" readonly placeholder="Se llena al elegir placa" style="background:#f0f0f0;color:#555">
+
+<label>Kilometraje <span class="required">*</span></label>
+<input type="number" name="kilometraje" id="inputKilometraje" required min="0" placeholder="Ej. 45230" style="text-transform:none">
+
+<label>Comentarios</label>
+<textarea name="comentarios"></textarea>
+</div>
+
+<div class="form-section">
+<h3>📸 Fotografias obligatorias</h3>
+
+<label>1 Lado Derecho <span class="required">*</span></label>
+<input type="file" id="fotoDerecho" accept="image/*" capture required>
+<div class="file-preview" id="previewDerecho"></div>
+
+<label>2 Lado Izquierdo <span class="required">*</span></label>
+<input type="file" id="fotoIzquierdo" accept="image/*" capture required>
+<div class="file-preview" id="previewIzquierdo"></div>
+
+<label>3 Frente Unidad <span class="required">*</span></label>
+<input type="file" id="fotoFrente" accept="image/*" capture required>
+<div class="file-preview" id="previewFrente"></div>
+
+<label>4 Atras Unidad <span class="required">*</span></label>
+<input type="file" id="fotoAtras" accept="image/*" capture required>
+<div class="file-preview" id="previewAtras"></div>
+
+<label>5 Interior (Caja) <span class="required">*</span></label>
+<input type="file" id="fotoInterior" accept="image/*" capture required>
+<div class="file-preview" id="previewInterior"></div>
+
+<label>6 Kilometraje Tablero <span class="required">*</span></label>
+<input type="file" id="fotoTablero" accept="image/*" capture required>
+<div class="file-preview" id="previewTablero"></div>
+
+<label>7 Licencia <span class="required">*</span></label>
+<input type="file" id="fotoLicencia" accept="image/*" capture required>
+<div class="file-preview" id="previewLicencia"></div>
+
+<label>8 Tarjeta de Circulacion <span style="color:#888;font-size:11px;">(Puedes cargar el documento)</span></label>
+<input type="file" id="fotoCirculacion" accept="image/*,application/pdf,.pdf,.doc,.docx">
+<div class="file-preview" id="previewCirculacion"></div>
+
+</div>
+
+<button id="btnEnviar">Enviar Registro</button>
+</form>
+
+<!-- Barra de progreso -->
+<div id="progressWrap">
+  <div id="progressLabel">Preparando envio...</div>
+  <div id="progressBar"><div id="progressFill"></div></div>
+  <div id="progressPct">0%</div>
+</div>
+
+<div id="respuesta"></div>
+<div class="tiempo-uso" id="tiempoUso"></div>
+</div>
+
+<script>
+const webAppUrl   = "https://script.google.com/macros/s/AKfycbxLExQxDM2hU1WLMMy_jd3OdMAJwRGYDk0RwJD7U1_GQIg1VTN2vCK5vyZHQrCWA0MBMQ/exec";
+const flotillaUrl = "https://script.google.com/macros/s/AKfycbxLExQxDM2hU1WLMMy_jd3OdMAJwRGYDk0RwJD7U1_GQIg1VTN2vCK5vyZHQrCWA0MBMQ/exec";
+
+// ── SYNC CON FLOTILLA ──
+async function sincronizarFlotilla(placa, conductor, tienda, kilometraje) {
+  try {
+    await fetch(flotillaUrl, {
+      method: "POST",
+      body: JSON.stringify({
+        action:      "updateConductorTienda",
+        placa:       placa,
+        conductor:   conductor,
+        tienda:      tienda,
+        kilometraje: kilometraje
+      })
+    });
+    console.log("✅ Flotilla actualizada:", placa, conductor, tienda, kilometraje);
+  } catch (e) {
+    console.warn("⚠️ No se pudo sincronizar con Flotilla:", e);
+  }
+}
+
+let vehiculosData = [];
+let tiendasData   = [];
+
+// ── PROGRESO ──
+function setProgress(pct, label) {
+  document.getElementById("progressFill").style.width = pct + "%";
+  document.getElementById("progressPct").textContent = pct + "%";
+  if (label) document.getElementById("progressLabel").textContent = label;
+}
+function showProgress(show) {
+  document.getElementById("progressWrap").classList.toggle("show", show);
+  if (!show) setProgress(0, "Preparando envio...");
+}
+
+// ── COMPRESION DE IMAGEN (calidad adaptativa) ──
+// maxPx=1280 → buena resolución para leer texto (licencias, tableros) ~80-200 KB por foto
+function comprimirImagen(file, maxPx = 1280, qualityBase = 0.72) {
+  return new Promise((resolve, reject) => {
+    // PDFs y documentos: pasar sin recomprimir
+    if (file.type === "application/pdf" || file.type.includes("document")) {
+      const r = new FileReader();
+      r.onerror = reject;
+      r.onload  = e => resolve(e.target.result);
+      r.readAsDataURL(file);
+      return;
+    }
+    const reader = new FileReader();
+    reader.onerror = reject;
+    reader.onload  = (ev) => {
+      const img = new Image();
+      img.onerror = reject;
+      img.onload  = () => {
+        const canvas = document.createElement("canvas");
+        let w = img.width, h = img.height;
+        // Redimensionar conservando proporción
+        if (w > h && w > maxPx)       { h = Math.round(h * maxPx / w); w = maxPx; }
+        else if (h > w && h > maxPx)  { w = Math.round(w * maxPx / h); h = maxPx; }
+        else if (w === h && w > maxPx){ w = h = maxPx; }
+        canvas.width = w; canvas.height = h;
+        canvas.getContext("2d").drawImage(img, 0, 0, w, h);
+
+        // Calidad adaptativa según píxeles finales del canvas
+        const rawSize = w * h * 4;
+        let quality;
+        if      (rawSize > 800000) quality = 0.52;  // foto grande  → compresión alta pero nítida
+        else if (rawSize > 400000) quality = 0.62;  // tamaño medio → buen balance
+        else                       quality = qualityBase; // foto pequeña → máxima nitidez
+
+        resolve(canvas.toDataURL("image/jpeg", quality));
+      };
+      img.src = ev.target.result;
+    };
+    reader.readAsDataURL(file);
+  });
+}
+
+// ── PREVIEW DE FOTOS ──
+function preview(id, p) {
+  document.getElementById(id).addEventListener("change", e => {
+    const f = e.target.files[0];
+    if (f) {
+      const r = new FileReader();
+      r.onload = x => { p.innerHTML = `<img src="${x.target.result}">`; p.style.display = "block"; };
+      r.readAsDataURL(f);
+    }
+  });
+}
+["Derecho","Izquierdo","Frente","Atras","Interior","Tablero","Licencia","Circulacion"]
+  .forEach(f => preview("foto" + f, document.getElementById("preview" + f)));
+
+// ── BUSCADOR DE TIENDAS ──
+const inputBuscar        = document.getElementById("inputBuscarTienda");
+const listaTiendasEl     = document.getElementById("listaTiendas");
+const tiendaSeleccionada = document.getElementById("tiendaSeleccionada");
+const tiendaTexto        = document.getElementById("tiendaSeleccionadaTexto");
+const inputTiendaHidden  = document.getElementById("inputTiendaHidden");
+const btnClearTienda     = document.getElementById("btnClearTienda");
+
+function resaltarTexto(texto, busqueda) {
+  if (!busqueda) return texto;
+  const re = new RegExp("(" + busqueda.replace(/[.*+?^${}()|[\]\\]/g, "\\$&") + ")", "gi");
+  return texto.replace(re, "<mark>$1</mark>");
+}
+
+function renderTiendas(filtro) {
+  listaTiendasEl.innerHTML = "";
+  const lista = filtro
+    ? tiendasData.filter(t => t.toLowerCase().includes(filtro.toLowerCase()))
+    : tiendasData;
+
+  if (lista.length === 0) {
+    listaTiendasEl.innerHTML = "<div class='tienda-no-result'>No se encontraron tiendas</div>";
+  } else {
+    lista.forEach(t => {
+      const item = document.createElement("div");
+      item.className = "tienda-item";
+      item.innerHTML = resaltarTexto(t, filtro);
+      item.addEventListener("click", () => seleccionarTienda(t));
+      listaTiendasEl.appendChild(item);
+    });
+  }
+  listaTiendasEl.classList.add("show");
+}
+
+function seleccionarTienda(nombre) {
+  inputTiendaHidden.value = nombre;
+  tiendaTexto.textContent = "✅ " + nombre;
+  tiendaSeleccionada.classList.add("show");
+  inputBuscar.value = "";
+  listaTiendasEl.classList.remove("show");
+  inputBuscar.style.display = "none";
+  document.querySelector(".tienda-search-icon").style.display = "none";
+}
+
+function limpiarTienda() {
+  inputTiendaHidden.value = "";
+  tiendaSeleccionada.classList.remove("show");
+  inputBuscar.value = "";
+  inputBuscar.style.display = "";
+  document.querySelector(".tienda-search-icon").style.display = "";
+  listaTiendasEl.classList.remove("show");
+  inputBuscar.focus();
+}
+
+inputBuscar.addEventListener("focus", () => {
+  if (tiendasData.length > 0) renderTiendas(inputBuscar.value);
+});
+inputBuscar.addEventListener("input", () => {
+  renderTiendas(inputBuscar.value);
+});
+btnClearTienda.addEventListener("click", limpiarTienda);
+document.addEventListener("click", e => {
+  if (!e.target.closest("#tiendaContainer")) listaTiendasEl.classList.remove("show");
+});
+
+// ── CARGA DE TIENDAS ──
+async function cargarTiendas() {
+  const loading = document.getElementById("tiendasLoading");
+  loading.classList.add("show");
+  try {
+    const response = await fetch(webAppUrl + "?action=getTiendas");
+    const data = await response.json();
+    tiendasData = data.map(t => typeof t === "string" ? t : (t.tienda || t.nombre || String(t)));
+  } catch (e) {
+    inputBuscar.placeholder = "⚠️ Error al cargar tiendas";
+    console.error("Error cargando tiendas:", e);
+  } finally {
+    loading.classList.remove("show");
+  }
+}
+
+// ── PERMISO GPS ──
+let gpsPermitido = false;
+
+async function pedirGPS() {
+  const btn      = document.getElementById("btnPedirGPS");
+  const estado   = document.getElementById("gpsEstado");
+  const warning  = document.getElementById("gpsWarning");
+
+  btn.disabled = true;
+  btn.textContent = "⏳ Solicitando...";
+  estado.textContent = "";
+
+  // Verificar soporte
+  if (!navigator.geolocation) {
+    estado.textContent = "❌ Tu navegador no soporta GPS.";
+    btn.disabled = false;
+    btn.textContent = "📍 Permitir ubicación";
+    return;
+  }
+
+  // Intentar obtener posición — esto dispara el diálogo del sistema en móvil
+  try {
+    await new Promise((resolve, reject) => {
+      navigator.geolocation.getCurrentPosition(
+        (pos) => {
+          gpsPermitido = true;
+          warning.classList.remove("show");
+          resolve(pos);
+        },
+        (err) => {
+          let msg = "❌ Permiso denegado.";
+          if (err.code === 1) msg = "❌ Permiso denegado. Ve a Ajustes del navegador y activa la ubicación.";
+          if (err.code === 2) msg = "⚠️ No se pudo obtener la posición. Verifica que el GPS esté activo.";
+          if (err.code === 3) msg = "⚠️ Tiempo de espera agotado. Intenta de nuevo.";
+          estado.textContent = msg;
+          btn.disabled = false;
+          btn.textContent = "📍 Reintentar";
+          reject(err);
+        },
+        { enableHighAccuracy: true, timeout: 15000, maximumAge: 0 }
+      );
+    });
+  } catch (e) {}
+}
+
+document.getElementById("btnPedirGPS").addEventListener("click", pedirGPS);
+
+// ── CARGA INICIAL ──
+window.addEventListener("load", async () => {
+  // Verificar si ya tiene permiso concedido sin volver a preguntar
+  if (navigator.permissions) {
+    try {
+      const result = await navigator.permissions.query({ name: "geolocation" });
+      if (result.state === "granted") {
+        gpsPermitido = true;
+        document.getElementById("gpsWarning").classList.remove("show");
+      }
+      // Si cambia el estado después (ej. el usuario lo activa en ajustes)
+      result.onchange = () => {
+        if (result.state === "granted") {
+          gpsPermitido = true;
+          document.getElementById("gpsWarning").classList.remove("show");
+        }
+      };
+    } catch (e) {}
+  }
+
+  await Promise.all([
+    (async () => {
+      try {
+        const r = await fetch(webAppUrl + "?action=getVehiculos");
+        vehiculosData = await r.json();
+      } catch (e) { console.error("Error cargando vehiculos:", e); }
+    })(),
+    cargarTiendas()
+  ]);
+});
+
+// ── AUTOCOMPLETADO PLACA ──
+const inputPlaca        = document.getElementById("inputPlaca");
+const listaPlacas       = document.getElementById("listaPlacas");
+const placaCounter      = document.getElementById("placaCounter");
+const placaNoEncontrada = document.getElementById("placaNoEncontrada");
+
+inputPlaca.addEventListener("keypress", e => {
+  if (!/[A-Za-z0-9]/.test(String.fromCharCode(e.which || e.keyCode))) e.preventDefault();
+});
+
+inputPlaca.addEventListener("input", e => {
+  let valor = e.target.value.replace(/[^A-Za-z0-9]/g, "").toUpperCase();
+  if (valor.length > 8) valor = valor.slice(0, 8);
+  inputPlaca.value = valor;
+
+  const len = valor.length;
+  placaCounter.textContent = len + " / 8 caracteres";
+  placaCounter.classList.toggle("lleno", len === 8);
+  placaNoEncontrada.classList.remove("show");
+  listaPlacas.style.display = "none";
+  if (!valor.length) return;
+
+  const filtrados = vehiculosData.filter(v => v.placa.toUpperCase().includes(valor));
+
+  if (filtrados.length > 0) {
+    listaPlacas.innerHTML = "";
+    filtrados.forEach(vehiculo => {
+      const item = document.createElement("div");
+      item.className = "autocomplete-item";
+      item.innerHTML = "<strong>" + vehiculo.placa + "</strong>";
+      item.addEventListener("click", () => {
+        inputPlaca.value = vehiculo.placa;
+        placaCounter.textContent = vehiculo.placa.length + " / 8 caracteres";
+        placaCounter.classList.toggle("lleno", vehiculo.placa.length === 8);
+        document.getElementById("inputMarca").value    = vehiculo.marca    || "";
+        document.getElementById("inputSubmarca").value = vehiculo.submarca || "";
+        listaPlacas.style.display = "none";
+        placaNoEncontrada.classList.remove("show");
+        verificarEstadoPlaca(vehiculo.placa);
+      });
+      listaPlacas.appendChild(item);
+    });
+    listaPlacas.style.display = "block";
+  } else {
+    listaPlacas.style.display = "none";
+    placaNoEncontrada.classList.add("show");
+  }
+});
+
+document.addEventListener("click", e => {
+  if (!e.target.closest(".autocomplete-container")) listaPlacas.style.display = "none";
+});
+
+// ── TIEMPO DE USO ──
+function mostrarTiempoUso(datos) {
+  const div = document.getElementById("tiempoUso");
+  if (!datos.tiempoUso) { div.style.display = "none"; return; }
+  const horas   = Math.floor(datos.tiempoUso / 60);
+  const minutos = datos.tiempoUso % 60;
+  const texto   = horas > 0
+    ? horas + " hora" + (horas !== 1 ? "s" : "") + " y " + minutos + " minuto" + (minutos !== 1 ? "s" : "")
+    : minutos + " minuto" + (minutos !== 1 ? "s" : "");
+  div.innerHTML =
+    "<h3>Control de Tiempo de Uso</h3>" +
+    "<div class='detalle'><strong>Placa:</strong> " + datos.placa + "</div>" +
+    "<div class='detalle'><strong>Ultima " + datos.ultimoMovimiento + ":</strong> " + datos.fechaUltimoRegistro + " a las " + datos.horaUltimoRegistro + "</div>" +
+    "<div class='detalle'><strong>Movimiento actual:</strong> " + datos.movimientoActual + "</div>" +
+    "<div class='destacado'>TIEMPO DE USO: " + texto + "</div>";
+  div.style.display = "block";
+}
+
+// ── SELECTOR INICIO / FIN ──
+function selMovimiento(valor) {
+  document.getElementById("inputMovimiento").value = valor;
+  const btnInicio = document.getElementById("btnInicio");
+  const btnFin    = document.getElementById("btnFin");
+  if (valor === "INICIO") {
+    btnInicio.classList.add("activo");    btnInicio.disabled = true;
+    btnFin.classList.remove("activo");   btnFin.disabled    = false;
+  } else {
+    btnFin.classList.add("activo");      btnFin.disabled    = true;
+    btnInicio.classList.remove("activo");btnInicio.disabled = false;
+  }
+  document.getElementById("movError").classList.remove("show");
+}
+
+// ── ENVIO DEL FORMULARIO ──
+document.getElementById("formDatos").addEventListener("submit", async e => {
+  e.preventDefault();
+  const btn = document.getElementById("btnEnviar");
+  const res = document.getElementById("respuesta");
+
+  res.style.display = "none";
+  document.getElementById("tiempoUso").style.display = "none";
+  btn.disabled = true;
+  showProgress(true);
+  setProgress(5, "Validando datos...");
+
+  if (!inputTiendaHidden.value) {
+    res.className = "error";
+    res.innerHTML = "Debes seleccionar una tienda";
+    res.style.display = "block";
+    btn.disabled = false;
+    showProgress(false);
+    return;
+  }
+
+  if (!document.getElementById("inputMovimiento").value) {
+    document.getElementById("movError").classList.add("show");
+    res.className = "error";
+    res.innerHTML = "Selecciona INICIO o FIN";
+    res.style.display = "block";
+    btn.disabled = false;
+    showProgress(false);
+    return;
+  }
+
+  const placaVal = inputPlaca.value.trim();
+  if (!/^[A-Z0-9]{1,8}$/.test(placaVal)) {
+    res.className = "error";
+    res.innerHTML = "La placa debe contener solo letras y numeros (max. 8 caracteres)";
+    res.style.display = "block";
+    btn.disabled = false;
+    showProgress(false);
+    return;
+  }
+
+  const fotosIds = ["fotoDerecho","fotoIzquierdo","fotoFrente","fotoAtras",
+                    "fotoInterior","fotoTablero","fotoLicencia"];
+  for (const id of fotosIds) {
+    if (!document.getElementById(id).files[0]) {
+      res.className = "error";
+      res.innerHTML = "Todas las fotografias son obligatorias";
+      res.style.display = "block";
+      btn.disabled = false;
+      showProgress(false);
+      return;
+    }
+  }
+
+  try {
+    // Verificar que GPS fue permitido
+    if (!gpsPermitido) {
+      document.getElementById("gpsWarning").classList.add("show");
+      document.getElementById("gpsWarning").scrollIntoView({ behavior: "smooth" });
+      throw new Error("Debes permitir la ubicación antes de enviar. Pulsa el botón 📍 Permitir ubicación.");
+    }
+
+    setProgress(10, "Obteniendo ubicacion GPS...");
+    const ubicacion = await new Promise((ok, fail) => {
+      navigator.geolocation.getCurrentPosition(
+        p => ok({ lat: p.coords.latitude, lng: p.coords.longitude }),
+        () => fail("GPS_DENEGADO"),
+        { enableHighAccuracy: true }
+      );
+    });
+
+    const fotosComprimidas = {};
+    for (let i = 0; i < fotosIds.length; i++) {
+      const id  = fotosIds[i];
+      const pct = 15 + Math.round((i + 1) * (72 / fotosIds.length));
+      setProgress(pct, "Comprimiendo foto " + (i + 1) + " de " + fotosIds.length + "...");
+      fotosComprimidas[id] = await comprimirImagen(document.getElementById(id).files[0]);
+    }
+
+    // Foto circulacion (opcional, puede ser PDF)
+    const fotoCircEl = document.getElementById("fotoCirculacion").files[0];
+    if (fotoCircEl) {
+      fotosComprimidas.fotoCirculacion = await comprimirImagen(fotoCircEl);
+    }
+
+    const getVal = (name) => {
+      const el = document.querySelector('[name="' + name + '"]');
+      if (!el) throw new Error("Campo " + name + " no encontrado");
+      return el.value;
+    };
+    const data = {
+      action:          "registroDiario",
+      fecha:           new Date().toLocaleDateString("es-MX"),
+      hora:            new Date().toLocaleTimeString("es-MX"),
+      movimiento:      document.getElementById("inputMovimiento").value,
+      nombre:          getVal("nombre"),
+      usuario:         getVal("usuario"),
+      tienda:          inputTiendaHidden.value,
+      placa:           inputPlaca.value,
+      marca:           document.getElementById("inputMarca").value,
+      submarca:        document.getElementById("inputSubmarca").value,
+      comentarios:     getVal("comentarios"),
+      kilometraje:     document.getElementById("inputKilometraje").value,
+      latitud:         ubicacion.lat,
+      longitud:        ubicacion.lng,
+      fotoDerecho:     fotosComprimidas.fotoDerecho,
+      fotoIzquierdo:   fotosComprimidas.fotoIzquierdo,
+      fotoFrente:      fotosComprimidas.fotoFrente,
+      fotoAtras:       fotosComprimidas.fotoAtras,
+      fotoInterior:    fotosComprimidas.fotoInterior,
+      fotoTablero:     fotosComprimidas.fotoTablero,
+      fotoLicencia:    fotosComprimidas.fotoLicencia,
+      fotoCirculacion: fotosComprimidas.fotoCirculacion || ""
+    };
+
+    setProgress(90, "Enviando al servidor...");
+    const response  = await fetch(webAppUrl, { method: "POST", body: JSON.stringify(data) });
+    const resultado = await response.json();
+    setProgress(100, "Completado!");
+    setTimeout(() => showProgress(false), 1200);
+
+    if (resultado.success) {
+      res.className = "success";
+      res.innerHTML = "Registro enviado correctamente";
+      res.style.display = "block";
+
+      await sincronizarFlotilla(data.placa, data.nombre, data.tienda, data.kilometraje);
+
+      if (resultado.tiempoUso !== undefined) {
+        mostrarTiempoUso({
+          placa:               data.placa,
+          tiempoUso:           resultado.tiempoUso,
+          ultimoMovimiento:    resultado.ultimoMovimiento,
+          fechaUltimoRegistro: resultado.fechaUltimoRegistro,
+          horaUltimoRegistro:  resultado.horaUltimoRegistro,
+          movimientoActual:    data.movimiento
+        });
+      }
+
+      // Limpiar formulario
+      document.getElementById("formDatos").reset();
+      inputPlaca.value = "";
+      document.getElementById("inputKilometraje").value = "";
+      document.getElementById("inputMarca").value    = "";
+      document.getElementById("inputSubmarca").value = "";
+      document.getElementById("inputMovimiento").value = "";
+      document.getElementById("btnInicio").classList.remove("activo"); document.getElementById("btnInicio").disabled = false;
+      document.getElementById("btnFin").classList.remove("activo");   document.getElementById("btnFin").disabled   = false;
+      document.getElementById("estadoPlacaInfo").className = "";
+      document.getElementById("estadoPlacaInfo").textContent = "";
+      placaCounter.textContent = "0 / 8 caracteres";
+      placaCounter.classList.remove("lleno");
+      placaNoEncontrada.classList.remove("show");
+      document.querySelectorAll(".file-preview").forEach(p => p.style.display = "none");
+      limpiarTienda();
+
+    } else {
+      throw new Error(resultado.error || "Error al enviar");
+    }
+
+  } catch (err) {
+    showProgress(false);
+    if (err === "GPS_DENEGADO" || (err.message && err.message.includes("ubicación"))) {
+      document.getElementById("gpsWarning").classList.add("show");
+      document.getElementById("gpsWarning").scrollIntoView({ behavior: "smooth" });
+      res.className = "error";
+      res.innerHTML = err.message || "Debes permitir la ubicacion para enviar";
+    } else {
+      res.className = "error";
+      res.innerHTML = "Error: " + (err.message || err);
+    }
+    res.style.display = "block";
+  }
+
+  btn.disabled = false;
+});
+
+// ── VERIFICAR ESTADO DE PLACA EN SHEETS ──
+async function verificarEstadoPlaca(placa) {
+  const btnInicio = document.getElementById("btnInicio");
+  const btnFin    = document.getElementById("btnFin");
+  const estadoDiv = document.getElementById("estadoPlacaInfo");
+  const inputMov  = document.getElementById("inputMovimiento");
+
+  // Guardar el movimiento que ya tenía seleccionado el usuario (si había uno)
+  const movPrevio = inputMov.value;
+
+  // Deshabilitar botones mientras carga sin borrar la selección visual
+  btnInicio.disabled = true;
+  btnFin.disabled    = true;
+
+  estadoDiv.className = "show estado-cargando";
+  estadoDiv.textContent = "⏳ Verificando estado de la placa...";
+
+  try {
+    const hoy = new Date().toLocaleDateString("es-MX");
+    const url  = webAppUrl + "?action=getUltimoMovimiento&placa=" + encodeURIComponent(placa) + "&fecha=" + encodeURIComponent(hoy);
+    const resp = await fetch(url);
+    const data = await resp.json();
+
+    const ultimo = data.movimiento || null;
+
+    if (ultimo === "INICIO") {
+      // Solo FIN disponible
+      btnInicio.disabled = true;
+      btnFin.disabled    = false;
+      estadoDiv.className = "show estado-inicio";
+      estadoDiv.innerHTML = "🟠 Ya tiene INICIO registrado hoy — solo puedes registrar <strong>FIN</strong>";
+      if (movPrevio === "INICIO") {
+        // INICIO ya no es válido, limpiar
+        btnInicio.classList.remove("activo");
+        btnFin.classList.remove("activo");
+        inputMov.value = "";
+      } else if (movPrevio === "FIN") {
+        // FIN sigue válido, restaurarlo
+        btnFin.classList.add("activo");
+        btnInicio.classList.remove("activo");
+        inputMov.value = "FIN";
+      }
+    } else {
+      // Solo INICIO disponible
+      btnInicio.disabled = false;
+      btnFin.disabled    = true;
+      estadoDiv.className = "show estado-libre";
+      estadoDiv.innerHTML = ultimo === "FIN"
+        ? "✅ Último movimiento fue FIN — puedes registrar <strong>INICIO</strong>"
+        : "✅ Sin registro hoy — puedes registrar <strong>INICIO</strong>";
+      if (movPrevio === "FIN") {
+        // FIN ya no es válido, limpiar
+        btnFin.classList.remove("activo");
+        btnInicio.classList.remove("activo");
+        inputMov.value = "";
+      } else if (movPrevio === "INICIO") {
+        // INICIO sigue válido, restaurarlo
+        btnInicio.classList.add("activo");
+        btnFin.classList.remove("activo");
+        inputMov.value = "INICIO";
+      }
+    }
+  } catch(e) {
+    // Si falla la consulta, restaurar movimiento previo y habilitar ambos
+    btnInicio.disabled = false;
+    btnFin.disabled    = false;
+    if (movPrevio) {
+      inputMov.value = movPrevio;
+      btnInicio.classList.toggle("activo", movPrevio === "INICIO");
+      btnFin.classList.toggle("activo",    movPrevio === "FIN");
+    }
+    estadoDiv.className = "show estado-inicio";
+    estadoDiv.textContent = "⚠️ No se pudo verificar el estado — elige manualmente";
+    console.warn("Error verificando estado placa:", e);
+  }
+}
+</script>
+
+</body>
+</html>
