@@ -92,7 +92,7 @@ button:disabled{background:#aaa;cursor:not-allowed}
 
 <body>
 
-<header>🚗 Registro Diario Flotilla BETA</header>
+<header>🚗 Registro de Recepción / Entrega de Vehículos</header>
 
 <div class="container">
 
@@ -112,10 +112,30 @@ button:disabled{background:#aaa;cursor:not-allowed}
 <div class="form-section">
 <h3>📋 Información General</h3>
 
+<label>Placa <span class="required">*</span></label>
+<div class="autocomplete-container">
+  <input
+    name="placa"
+    id="inputPlaca"
+    required
+    style="text-transform:uppercase"
+    autocomplete="off"
+    placeholder="Max. 8 caracteres alfanumericos"
+    maxlength="8"
+    pattern="[A-Za-z0-9]{1,8}"
+    title="Solo letras y numeros, maximo 8 caracteres"
+  >
+  <div class="placa-counter" id="placaCounter">0 / 8 caracteres</div>
+  <div class="autocomplete-list" id="listaPlacas"></div>
+  <div class="placa-no-encontrada" id="placaNoEncontrada">
+    Placa no encontrada en el sistema
+  </div>
+</div>
+
 <label>Movimiento <span class="required">*</span></label>
 <div class="mov-buttons">
-  <button type="button" class="mov-btn mov-btn-inicio" id="btnInicio" onclick="selMovimiento('INICIO')">🟢 INICIO</button>
-  <button type="button" class="mov-btn mov-btn-fin"   id="btnFin"    onclick="selMovimiento('FIN')">🔴 FIN</button>
+  <button type="button" class="mov-btn mov-btn-inicio" id="btnInicio" onclick="selMovimiento('INICIO')" disabled>🟢 INICIO</button>
+  <button type="button" class="mov-btn mov-btn-fin"   id="btnFin"    onclick="selMovimiento('FIN')" disabled>🔴 FIN</button>
 </div>
 <div class="mov-error" id="movError">Selecciona INICIO o FIN</div>
 <div id="estadoPlacaInfo"></div>
@@ -147,26 +167,6 @@ button:disabled{background:#aaa;cursor:not-allowed}
   <input type="text" id="inputTiendaHidden" name="tienda" required readonly tabindex="-1">
 </div>
 <div class="select-loading" id="tiendasLoading">⏳ Cargando lista de tiendas...</div>
-
-<label>Placa <span class="required">*</span></label>
-<div class="autocomplete-container">
-  <input
-    name="placa"
-    id="inputPlaca"
-    required
-    style="text-transform:uppercase"
-    autocomplete="off"
-    placeholder="Max. 8 caracteres alfanumericos"
-    maxlength="8"
-    pattern="[A-Za-z0-9]{1,8}"
-    title="Solo letras y numeros, maximo 8 caracteres"
-  >
-  <div class="placa-counter" id="placaCounter">0 / 8 caracteres</div>
-  <div class="autocomplete-list" id="listaPlacas"></div>
-  <div class="placa-no-encontrada" id="placaNoEncontrada">
-    Placa no encontrada en el sistema
-  </div>
-</div>
 
 <label>Marca <span class="required">*</span></label>
 <input type="text" name="marca" id="inputMarca" readonly placeholder="Se llena al elegir placa" style="background:#f0f0f0;color:#555">
@@ -504,6 +504,12 @@ inputPlaca.addEventListener("input", e => {
   placaCounter.classList.toggle("lleno", len === 8);
   placaNoEncontrada.classList.remove("show");
   listaPlacas.style.display = "none";
+
+  // Al cambiar la placa, el permiso de movimiento verificado ya no aplica
+  movimientoPermitido = null;
+  document.getElementById("btnInicio").disabled = true;
+  document.getElementById("btnFin").disabled    = true;
+
   if (!valor.length) return;
 
   const filtrados = vehiculosData.filter(v => v.placa.toUpperCase().includes(valor));
@@ -556,16 +562,29 @@ function mostrarTiempoUso(datos) {
 }
 
 // ── SELECTOR INICIO / FIN ──
+// movimientoPermitido guarda lo que el servidor autorizo para la placa actual:
+// "INICIO", "FIN", o null si aun no se ha verificado / hubo error de verificacion.
+let movimientoPermitido = null;
+
 function selMovimiento(valor) {
+  // Si ya sabemos que movimiento esta permitido, no dejar seleccionar el otro
+  // (evita que el usuario "destrabe" el boton contrario).
+  if (movimientoPermitido && valor !== movimientoPermitido) {
+    return;
+  }
+
   document.getElementById("inputMovimiento").value = valor;
   const btnInicio = document.getElementById("btnInicio");
   const btnFin    = document.getElementById("btnFin");
   if (valor === "INICIO") {
-    btnInicio.classList.add("activo");    btnInicio.disabled = true;
-    btnFin.classList.remove("activo");   btnFin.disabled    = false;
+    btnInicio.classList.add("activo");
+    btnFin.classList.remove("activo");
+    // Solo habilitar el boton contrario si no hay una restriccion conocida del servidor
+    if (!movimientoPermitido) btnFin.disabled = false;
   } else {
-    btnFin.classList.add("activo");      btnFin.disabled    = true;
-    btnInicio.classList.remove("activo");btnInicio.disabled = false;
+    btnFin.classList.add("activo");
+    if (!movimientoPermitido) btnInicio.disabled = false;
+    btnInicio.classList.remove("activo");
   }
   document.getElementById("movError").classList.remove("show");
 }
@@ -609,6 +628,34 @@ document.getElementById("formDatos").addEventListener("submit", async e => {
     btn.disabled = false;
     showProgress(false);
     return;
+  }
+
+  // ── RE-VERIFICACION FINAL CONTRA EL SERVIDOR ──
+  // Justo antes de enviar se vuelve a consultar el ultimo movimiento de la
+  // placa (por si alguien mas registro un INICIO/FIN mientras se llenaba el
+  // formulario). Si el movimiento elegido ya no es valido, se bloquea el envio.
+  try {
+    const movElegido = document.getElementById("inputMovimiento").value;
+    const hoyCheck = new Date().toLocaleDateString("es-MX");
+    const urlCheck = webAppUrl + "?action=getUltimoMovimiento&placa=" + encodeURIComponent(placaVal) + "&fecha=" + encodeURIComponent(hoyCheck);
+    const respCheck = await fetch(urlCheck);
+    const dataCheck = await respCheck.json();
+    const ultimoCheck = dataCheck.movimiento || null;
+    const permitidoAhora = ultimoCheck === "INICIO" ? "FIN" : "INICIO";
+
+    if (movElegido !== permitidoAhora) {
+      res.className = "error";
+      res.innerHTML = "El estado de esta placa cambio (posiblemente otra persona ya registro un movimiento). Vuelve a seleccionar la placa e intenta de nuevo.";
+      res.style.display = "block";
+      btn.disabled = false;
+      showProgress(false);
+      verificarEstadoPlaca(placaVal);
+      return;
+    }
+  } catch (eCheck) {
+    // Si la re-verificacion falla por conexion, se deja continuar el envio
+    // normal (el registro original de verificarEstadoPlaca ya se hizo).
+    console.warn("No se pudo re-verificar el estado antes de enviar:", eCheck);
   }
 
   const fotosIds = ["fotoDerecho","fotoIzquierdo","fotoFrente","fotoAtras",
@@ -716,8 +763,9 @@ document.getElementById("formDatos").addEventListener("submit", async e => {
       document.getElementById("inputMarca").value    = "";
       document.getElementById("inputSubmarca").value = "";
       document.getElementById("inputMovimiento").value = "";
-      document.getElementById("btnInicio").classList.remove("activo"); document.getElementById("btnInicio").disabled = false;
-      document.getElementById("btnFin").classList.remove("activo");   document.getElementById("btnFin").disabled   = false;
+      movimientoPermitido = null;
+      document.getElementById("btnInicio").classList.remove("activo"); document.getElementById("btnInicio").disabled = true;
+      document.getElementById("btnFin").classList.remove("activo");   document.getElementById("btnFin").disabled   = true;
       document.getElementById("estadoPlacaInfo").className = "";
       document.getElementById("estadoPlacaInfo").textContent = "";
       placaCounter.textContent = "0 / 8 caracteres";
@@ -774,6 +822,7 @@ async function verificarEstadoPlaca(placa) {
 
     if (ultimo === "INICIO") {
       // Solo FIN disponible
+      movimientoPermitido = "FIN";
       btnInicio.disabled = true;
       btnFin.disabled    = false;
       estadoDiv.className = "show estado-inicio";
@@ -791,6 +840,7 @@ async function verificarEstadoPlaca(placa) {
       }
     } else {
       // Solo INICIO disponible
+      movimientoPermitido = "INICIO";
       btnInicio.disabled = false;
       btnFin.disabled    = true;
       estadoDiv.className = "show estado-libre";
@@ -810,7 +860,9 @@ async function verificarEstadoPlaca(placa) {
       }
     }
   } catch(e) {
-    // Si falla la consulta, restaurar movimiento previo y habilitar ambos
+    // Si falla la consulta, no se sabe con certeza el estado: no se puede
+    // garantizar la restriccion, se avisa y se deja elegir manualmente.
+    movimientoPermitido = null;
     btnInicio.disabled = false;
     btnFin.disabled    = false;
     if (movPrevio) {
