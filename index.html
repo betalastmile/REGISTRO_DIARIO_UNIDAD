@@ -145,7 +145,17 @@ button:disabled{background:#aaa;cursor:not-allowed}
 <input name="nombre" required>
 
 <label>USUARIO BETA <span class="required">*</span></label>
-<input name="usuario" required placeholder="Ej. BMEXS0001">
+<input
+  name="usuario"
+  id="inputUsuario"
+  required
+  style="text-transform:uppercase"
+  autocomplete="off"
+  placeholder="Ej. BMEXS0001"
+  maxlength="12"
+  pattern="[A-Za-z0-9]{1,12}"
+  title="Solo letras y numeros, maximo 12 caracteres"
+>
 
 <!-- ── TIENDA: buscador + lista filtrada ── -->
 <label>Tienda <span class="required">*</span></label>
@@ -324,6 +334,26 @@ function preview(id, p) {
 }
 ["Derecho","Izquierdo","Frente","Atras","Interior","Tablero","Licencia","Circulacion"]
   .forEach(f => preview("foto" + f, document.getElementById("preview" + f)));
+
+// ── USUARIO BETA: solo alfanumerico, mayusculas, max 12 ──
+const inputUsuario = document.getElementById("inputUsuario");
+
+inputUsuario.addEventListener("keypress", e => {
+  if (!/[A-Za-z0-9]/.test(String.fromCharCode(e.which || e.keyCode))) e.preventDefault();
+});
+
+inputUsuario.addEventListener("input", e => {
+  let valor = e.target.value.replace(/[^A-Za-z0-9]/g, "").toUpperCase();
+  if (valor.length > 12) valor = valor.slice(0, 12);
+  inputUsuario.value = valor;
+});
+
+inputUsuario.addEventListener("paste", e => {
+  e.preventDefault();
+  const texto = (e.clipboardData || window.clipboardData).getData("text");
+  let valor = texto.replace(/[^A-Za-z0-9]/g, "").toUpperCase().slice(0, 12);
+  inputUsuario.value = valor;
+});
 
 // ── BUSCADOR DE TIENDAS ──
 const inputBuscar        = document.getElementById("inputBuscarTienda");
@@ -624,6 +654,16 @@ document.getElementById("formDatos").addEventListener("submit", async e => {
   if (!/^[A-Z0-9]{1,8}$/.test(placaVal)) {
     res.className = "error";
     res.innerHTML = "La placa debe contener solo letras y numeros (max. 8 caracteres)";
+    res.style.display = "block";
+    btn.disabled = false;
+    showProgress(false);
+    return;
+  }
+
+  const usuarioVal = inputUsuario.value.trim();
+  if (!/^[A-Z0-9]{1,12}$/.test(usuarioVal)) {
+    res.className = "error";
+    res.innerHTML = "USUARIO BETA debe ser alfanumerico, maximo 12 caracteres";
     res.style.display = "block";
     btn.disabled = false;
     showProgress(false);
