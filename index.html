@@ -4,6 +4,7 @@
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <title>Registro Diario de Flotila</title>
+<meta name="V.1.1" content="2026-07-22">
 
 <style>
 *{box-sizing:border-box;margin:0;padding:0}
@@ -512,6 +513,8 @@ window.addEventListener("load", async () => {
     })(),
     cargarTiendas()
   ]);
+
+  precargarUltimaPlaca();
 });
 
 // ── AUTOCOMPLETADO PLACA ──
@@ -558,6 +561,7 @@ inputPlaca.addEventListener("input", e => {
         document.getElementById("inputSubmarca").value = vehiculo.submarca || "";
         listaPlacas.style.display = "none";
         placaNoEncontrada.classList.remove("show");
+        guardarUltimaPlaca(vehiculo.placa);
         verificarEstadoPlaca(vehiculo.placa);
       });
       listaPlacas.appendChild(item);
@@ -783,6 +787,7 @@ document.getElementById("formDatos").addEventListener("submit", async e => {
       res.innerHTML = "Registro enviado correctamente";
       res.style.display = "block";
 
+      guardarUltimaPlaca(data.placa);
       await sincronizarFlotilla(data.placa, data.nombre, data.tienda, data.kilometraje);
 
       if (resultado.tiempoUso !== undefined) {
@@ -914,6 +919,68 @@ async function verificarEstadoPlaca(placa) {
     estadoDiv.textContent = "⚠️ No se pudo verificar el estado — elige manualmente";
     console.warn("Error verificando estado placa:", e);
   }
+}
+
+// ── DETECCION DE NUEVA VERSION ──
+// Cuando se sube una actualizacion del archivo (cambiando el content del
+// meta "app-version"), la pagina se recarga sola para asegurar que todos
+// usen siempre la ultima version, sin tener que avisar ni pedir permiso.
+const APP_VERSION = document.querySelector('meta[name="app-version"]').content;
+
+function hayRegistroEnProceso() {
+  // Evita recargar (y perder fotos/datos) si el usuario ya empezo a
+  // llenar el formulario: eligio INICIO/FIN o ya adjunto alguna foto.
+  if (document.getElementById("inputMovimiento").value) return true;
+  const idsFotos = ["fotoDerecho","fotoIzquierdo","fotoFrente","fotoAtras","fotoInterior","fotoTablero","fotoLicencia","fotoCirculacion"];
+  return idsFotos.some(id => {
+    const el = document.getElementById(id);
+    return el && el.files && el.files.length > 0;
+  });
+}
+
+async function checkForUpdate() {
+  try {
+    const url  = location.href.split("#")[0].split("?")[0] + "?v=" + Date.now();
+    const resp = await fetch(url, { cache: "no-store" });
+    const html = await resp.text();
+    const match = html.match(/<meta name="app-version" content="([^"]+)">/);
+    if (match && match[1] && match[1] !== APP_VERSION && !hayRegistroEnProceso()) {
+      location.reload();
+    }
+  } catch (e) {
+    // Sin internet o error de red: no hacer nada, se reintenta despues
+  }
+}
+
+// Revisar cada 5 minutos y tambien al volver a la pestaña/app
+setInterval(checkForUpdate, 5 * 60 * 1000);
+document.addEventListener("visibilitychange", () => {
+  if (!document.hidden) checkForUpdate();
+});
+checkForUpdate();
+
+// ── RECORDAR LA ULTIMA PLACA USADA ──
+// Guarda la ultima placa elegida en este dispositivo para no tener que
+// volver a buscarla cada vez que se abre la pagina (por ejemplo, para
+// registrar el FIN despues de haber registrado el INICIO).
+function guardarUltimaPlaca(placa) {
+  try { localStorage.setItem("ultimaPlacaFlotilla", placa); } catch (e) {}
+}
+
+async function precargarUltimaPlaca() {
+  let placaGuardada = "";
+  try { placaGuardada = localStorage.getItem("ultimaPlacaFlotilla") || ""; } catch (e) {}
+  if (!placaGuardada) return;
+
+  const vehiculo = vehiculosData.find(v => v.placa.toUpperCase() === placaGuardada.toUpperCase());
+  if (!vehiculo) return;
+
+  inputPlaca.value = vehiculo.placa;
+  placaCounter.textContent = vehiculo.placa.length + " / 8 caracteres";
+  placaCounter.classList.toggle("lleno", vehiculo.placa.length === 8);
+  document.getElementById("inputMarca").value    = vehiculo.marca    || "";
+  document.getElementById("inputSubmarca").value = vehiculo.submarca || "";
+  verificarEstadoPlaca(vehiculo.placa);
 }
 </script>
 
