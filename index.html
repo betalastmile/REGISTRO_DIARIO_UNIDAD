@@ -193,39 +193,43 @@ button:disabled{background:#aaa;cursor:not-allowed}
 </div>
 
 <div class="form-section">
-<h3>📸 Fotografias obligatorias</h3>
+<h3>📸 Fotografias</h3>
 
-<label>1 Lado Derecho <span class="required">*</span></label>
-<input type="file" id="fotoDerecho" accept="image/*" capture required>
+<label>1 Lado Derecho <span style="color:#888;font-size:11px;">(Opcional)</span></label>
+<input type="file" id="fotoDerecho" accept="image/*" capture>
 <div class="file-preview" id="previewDerecho"></div>
 
-<label>2 Lado Izquierdo <span class="required">*</span></label>
-<input type="file" id="fotoIzquierdo" accept="image/*" capture required>
+<label>2 Lado Izquierdo <span style="color:#888;font-size:11px;">(Opcional)</span></label>
+<input type="file" id="fotoIzquierdo" accept="image/*" capture>
 <div class="file-preview" id="previewIzquierdo"></div>
 
-<label>3 Frente Unidad <span class="required">*</span></label>
-<input type="file" id="fotoFrente" accept="image/*" capture required>
+<label>3 Frente Unidad <span style="color:#888;font-size:11px;">(Opcional)</span></label>
+<input type="file" id="fotoFrente" accept="image/*" capture>
 <div class="file-preview" id="previewFrente"></div>
 
-<label>4 Atras Unidad <span class="required">*</span></label>
-<input type="file" id="fotoAtras" accept="image/*" capture required>
+<label>4 Atras Unidad <span style="color:#888;font-size:11px;">(Opcional)</span></label>
+<input type="file" id="fotoAtras" accept="image/*" capture>
 <div class="file-preview" id="previewAtras"></div>
 
-<label>5 Interior (Caja) <span class="required">*</span></label>
-<input type="file" id="fotoInterior" accept="image/*" capture required>
+<label>5 Interior (Caja) <span style="color:#888;font-size:11px;">(Opcional)</span></label>
+<input type="file" id="fotoInterior" accept="image/*" capture>
 <div class="file-preview" id="previewInterior"></div>
 
-<label>6 Kilometraje Tablero <span class="required">*</span></label>
-<input type="file" id="fotoTablero" accept="image/*" capture required>
+<label>6 Kilometraje Tablero <span style="color:#888;font-size:11px;">(Opcional)</span></label>
+<input type="file" id="fotoTablero" accept="image/*" capture>
 <div class="file-preview" id="previewTablero"></div>
 
-<label>7 Licencia <span class="required">*</span></label>
-<input type="file" id="fotoLicencia" accept="image/*" capture required>
+<label>7 Licencia <span style="color:#888;font-size:11px;">(Opcional)</span></label>
+<input type="file" id="fotoLicencia" accept="image/*" capture>
 <div class="file-preview" id="previewLicencia"></div>
 
 <label>8 Tarjeta de Circulacion <span style="color:#888;font-size:11px;">(Puedes cargar el documento)</span></label>
 <input type="file" id="fotoCirculacion" accept="image/*,application/pdf,.pdf,.doc,.docx">
 <div class="file-preview" id="previewCirculacion"></div>
+
+<label>9 Ticket Dispersion <span style="color:#888;font-size:11px;">(Opcional, puede ser documento)</span></label>
+<input type="file" id="fotoTicketDispersion" accept="image/*,application/pdf,.pdf,.doc,.docx" capture>
+<div class="file-preview" id="previewTicketDispersion"></div>
 
 </div>
 
@@ -244,8 +248,8 @@ button:disabled{background:#aaa;cursor:not-allowed}
 </div>
 
 <script>
-const webAppUrl   = "https://script.google.com/macros/s/AKfycby3BY1F4iFo-QeULqJGNvOCuVznXZHfTlfsNN-Xwgfv-nHx04AvOeVUfhgZEtkv1ELpRw/exec";
-const flotillaUrl = "https://script.google.com/macros/s/AKfycby3BY1F4iFo-QeULqJGNvOCuVznXZHfTlfsNN-Xwgfv-nHx04AvOeVUfhgZEtkv1ELpRw/exec";
+const webAppUrl   = "https://script.google.com/macros/s/AKfycbyIvrQqd9AeTnwMIMx8bfZCCvEMwfzqrGCH38pxKOmFdn-zEAa6cWzXgisSVmGP33c48w/exec";
+const flotillaUrl = "https://script.google.com/macros/s/AKfycbyIvrQqd9AeTnwMIMx8bfZCCvEMwfzqrGCH38pxKOmFdn-zEAa6cWzXgisSVmGP33c48w/exec";
 
 // ── SYNC CON FLOTILLA ──
 async function sincronizarFlotilla(placa, conductor, tienda, kilometraje) {
@@ -333,7 +337,7 @@ function preview(id, p) {
     }
   });
 }
-["Derecho","Izquierdo","Frente","Atras","Interior","Tablero","Licencia","Circulacion"]
+["Derecho","Izquierdo","Frente","Atras","Interior","Tablero","Licencia","Circulacion","TicketDispersion"]
   .forEach(f => preview("foto" + f, document.getElementById("preview" + f)));
 
 // ── USUARIO BETA: solo alfanumerico, mayusculas, max 12 ──
@@ -689,7 +693,9 @@ document.getElementById("formDatos").addEventListener("submit", async e => {
 
     if (movElegido !== permitidoAhora) {
       res.className = "error";
-      res.innerHTML = "El estado de esta placa cambio (posiblemente otra persona ya registro un movimiento). Vuelve a seleccionar la placa e intenta de nuevo.";
+      res.innerHTML = (ultimoCheck === "INICIO" && dataCheck.nombrePendiente)
+        ? "No se puede iniciar: <strong>" + dataCheck.nombrePendiente + "</strong> registró el INICIO y aún no registra el FIN. Vuelve a seleccionar la placa e intenta de nuevo."
+        : "El estado de esta placa cambio (posiblemente otra persona ya registro un movimiento). Vuelve a seleccionar la placa e intenta de nuevo.";
       res.style.display = "block";
       btn.disabled = false;
       showProgress(false);
@@ -704,16 +710,6 @@ document.getElementById("formDatos").addEventListener("submit", async e => {
 
   const fotosIds = ["fotoDerecho","fotoIzquierdo","fotoFrente","fotoAtras",
                     "fotoInterior","fotoTablero","fotoLicencia"];
-  for (const id of fotosIds) {
-    if (!document.getElementById(id).files[0]) {
-      res.className = "error";
-      res.innerHTML = "Todas las fotografias son obligatorias";
-      res.style.display = "block";
-      btn.disabled = false;
-      showProgress(false);
-      return;
-    }
-  }
 
   try {
     // Verificar que GPS fue permitido
@@ -737,13 +733,22 @@ document.getElementById("formDatos").addEventListener("submit", async e => {
       const id  = fotosIds[i];
       const pct = 15 + Math.round((i + 1) * (72 / fotosIds.length));
       setProgress(pct, "Comprimiendo foto " + (i + 1) + " de " + fotosIds.length + "...");
-      fotosComprimidas[id] = await comprimirImagen(document.getElementById(id).files[0]);
+      const fEl = document.getElementById(id).files[0];
+      if (fEl) {
+        fotosComprimidas[id] = await comprimirImagen(fEl);
+      }
     }
 
     // Foto circulacion (opcional, puede ser PDF)
     const fotoCircEl = document.getElementById("fotoCirculacion").files[0];
     if (fotoCircEl) {
       fotosComprimidas.fotoCirculacion = await comprimirImagen(fotoCircEl);
+    }
+
+    // Foto ticket dispersion (opcional, puede ser PDF)
+    const fotoTicketEl = document.getElementById("fotoTicketDispersion").files[0];
+    if (fotoTicketEl) {
+      fotosComprimidas.fotoTicketDispersion = await comprimirImagen(fotoTicketEl);
     }
 
     const getVal = (name) => {
@@ -766,14 +771,15 @@ document.getElementById("formDatos").addEventListener("submit", async e => {
       kilometraje:     document.getElementById("inputKilometraje").value,
       latitud:         ubicacion.lat,
       longitud:        ubicacion.lng,
-      fotoDerecho:     fotosComprimidas.fotoDerecho,
-      fotoIzquierdo:   fotosComprimidas.fotoIzquierdo,
-      fotoFrente:      fotosComprimidas.fotoFrente,
-      fotoAtras:       fotosComprimidas.fotoAtras,
-      fotoInterior:    fotosComprimidas.fotoInterior,
-      fotoTablero:     fotosComprimidas.fotoTablero,
-      fotoLicencia:    fotosComprimidas.fotoLicencia,
-      fotoCirculacion: fotosComprimidas.fotoCirculacion || ""
+      fotoDerecho:          fotosComprimidas.fotoDerecho || "",
+      fotoIzquierdo:        fotosComprimidas.fotoIzquierdo || "",
+      fotoFrente:           fotosComprimidas.fotoFrente || "",
+      fotoAtras:            fotosComprimidas.fotoAtras || "",
+      fotoInterior:         fotosComprimidas.fotoInterior || "",
+      fotoTablero:          fotosComprimidas.fotoTablero || "",
+      fotoLicencia:         fotosComprimidas.fotoLicencia || "",
+      fotoCirculacion:      fotosComprimidas.fotoCirculacion || "",
+      fotoTicketDispersion: fotosComprimidas.fotoTicketDispersion || ""
     };
 
     setProgress(90, "Enviando al servidor...");
@@ -863,15 +869,22 @@ async function verificarEstadoPlaca(placa) {
     const resp = await fetch(url);
     const data = await resp.json();
 
-    const ultimo = data.movimiento || null;
+    const ultimo          = data.movimiento || null;
+    const nombrePendiente = data.nombrePendiente || "";
+    const siguienteReg    = data.siguienteRegistro || 1;
 
     if (ultimo === "INICIO") {
-      // Solo FIN disponible
+      // Hay un INICIO sin FIN: no se puede volver a registrar la unidad.
       movimientoPermitido = "FIN";
       btnInicio.disabled = true;
       btnFin.disabled    = false;
       estadoDiv.className = "show estado-inicio";
-      estadoDiv.innerHTML = "🟠 Ya tiene INICIO registrado hoy — solo puedes registrar <strong>FIN</strong>";
+      estadoDiv.innerHTML =
+        "⛔ No se puede iniciar un nuevo registro (Registro " + siguienteReg + ") — " +
+        (nombrePendiente
+          ? "<strong>" + nombrePendiente + "</strong> registró el INICIO y aún no registra el FIN."
+          : "hay un INICIO sin FIN registrado.") +
+        " Solo puedes registrar <strong>FIN</strong>.";
       if (movPrevio === "INICIO") {
         // INICIO ya no es válido, limpiar
         btnInicio.classList.remove("activo");
@@ -889,9 +902,7 @@ async function verificarEstadoPlaca(placa) {
       btnInicio.disabled = false;
       btnFin.disabled    = true;
       estadoDiv.className = "show estado-libre";
-      estadoDiv.innerHTML = ultimo === "FIN"
-        ? "✅ Último movimiento fue FIN — puedes registrar <strong>INICIO</strong>"
-        : "✅ Sin registro hoy — puedes registrar <strong>INICIO</strong>";
+      estadoDiv.innerHTML = "✅ Puedes registrar <strong>INICIO</strong> — este sera el <strong>Registro " + siguienteReg + "</strong> de hoy para esta placa";
       if (movPrevio === "FIN") {
         // FIN ya no es válido, limpiar
         btnFin.classList.remove("activo");
@@ -931,7 +942,7 @@ function hayRegistroEnProceso() {
   // Evita recargar (y perder fotos/datos) si el usuario ya empezo a
   // llenar el formulario: eligio INICIO/FIN o ya adjunto alguna foto.
   if (document.getElementById("inputMovimiento").value) return true;
-  const idsFotos = ["fotoDerecho","fotoIzquierdo","fotoFrente","fotoAtras","fotoInterior","fotoTablero","fotoLicencia","fotoCirculacion"];
+  const idsFotos = ["fotoDerecho","fotoIzquierdo","fotoFrente","fotoAtras","fotoInterior","fotoTablero","fotoLicencia","fotoCirculacion","fotoTicketDispersion"];
   return idsFotos.some(id => {
     const el = document.getElementById(id);
     return el && el.files && el.files.length > 0;
