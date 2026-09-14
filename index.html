@@ -4,7 +4,7 @@
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <title>Registro Diario de Flotila</title>
-<meta name="V.1.1" content="2026-07-22">
+<meta name="app-version" content="2026-07-22">
 
 <style>
 *{box-sizing:border-box;margin:0;padding:0}
@@ -248,27 +248,7 @@ button:disabled{background:#aaa;cursor:not-allowed}
 </div>
 
 <script>
-const webAppUrl   = "https://script.google.com/macros/s/AKfycbzGqr1xAVT1nAOctB04Is3JvPZqQKV1ahV1iFI4uyiijfIUNOvoYod7pvMZZLf0nq02-A/exec";
-const flotillaUrl = "https://script.google.com/macros/s/AKfycbzGqr1xAVT1nAOctB04Is3JvPZqQKV1ahV1iFI4uyiijfIUNOvoYod7pvMZZLf0nq02-A/exec";
-
-// ── SYNC CON FLOTILLA ──
-async function sincronizarFlotilla(placa, conductor, tienda, kilometraje) {
-  try {
-    await fetch(flotillaUrl, {
-      method: "POST",
-      body: JSON.stringify({
-        action:      "updateConductorTienda",
-        placa:       placa,
-        conductor:   conductor,
-        tienda:      tienda,
-        kilometraje: kilometraje
-      })
-    });
-    console.log("✅ Flotilla actualizada:", placa, conductor, tienda, kilometraje);
-  } catch (e) {
-    console.warn("⚠️ No se pudo sincronizar con Flotilla:", e);
-  }
-}
+const webAppUrl = "https://script.google.com/macros/s/AKfycbzVl7-g1IECeHnTe6XS3TW8bqua9reL29vhrMzFVEMnuLzGJch1HZ2gmFKmm5zPFM9Myg/exec";
 
 let vehiculosData = [];
 let tiendasData   = [];
@@ -801,7 +781,6 @@ document.getElementById("formDatos").addEventListener("submit", async e => {
       res.style.display = "block";
 
       guardarUltimaPlaca(data.placa);
-      await sincronizarFlotilla(data.placa, data.nombre, data.tienda, data.kilometraje);
 
       if (resultado.tiempoUso !== undefined) {
         mostrarTiempoUso({
