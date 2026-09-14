@@ -248,8 +248,8 @@ button:disabled{background:#aaa;cursor:not-allowed}
 </div>
 
 <script>
-const webAppUrl   = "https://script.google.com/macros/s/AKfycbyIvrQqd9AeTnwMIMx8bfZCCvEMwfzqrGCH38pxKOmFdn-zEAa6cWzXgisSVmGP33c48w/exec";
-const flotillaUrl = "https://script.google.com/macros/s/AKfycbyIvrQqd9AeTnwMIMx8bfZCCvEMwfzqrGCH38pxKOmFdn-zEAa6cWzXgisSVmGP33c48w/exec";
+const webAppUrl   = "https://script.google.com/macros/s/AKfycbzGqr1xAVT1nAOctB04Is3JvPZqQKV1ahV1iFI4uyiijfIUNOvoYod7pvMZZLf0nq02-A/exec";
+const flotillaUrl = "https://script.google.com/macros/s/AKfycbzGqr1xAVT1nAOctB04Is3JvPZqQKV1ahV1iFI4uyiijfIUNOvoYod7pvMZZLf0nq02-A/exec";
 
 // ── SYNC CON FLOTILLA ──
 async function sincronizarFlotilla(placa, conductor, tienda, kilometraje) {
@@ -377,7 +377,9 @@ function resaltarTexto(texto, busqueda) {
 function renderTiendas(filtro) {
   listaTiendasEl.innerHTML = "";
   const lista = filtro
-    ? tiendasData.filter(t => t.toLowerCase().includes(filtro.toLowerCase()))
+    ? tiendasData.filter(t =>
+        t.tienda.toLowerCase().includes(filtro.toLowerCase()) ||
+        t.determinante.toLowerCase().includes(filtro.toLowerCase()))
     : tiendasData;
 
   if (lista.length === 0) {
@@ -386,7 +388,8 @@ function renderTiendas(filtro) {
     lista.forEach(t => {
       const item = document.createElement("div");
       item.className = "tienda-item";
-      item.innerHTML = resaltarTexto(t, filtro);
+      const etiqueta = t.determinante ? (t.tienda + " · Det. " + t.determinante) : t.tienda;
+      item.innerHTML = resaltarTexto(etiqueta, filtro);
       item.addEventListener("click", () => seleccionarTienda(t));
       listaTiendasEl.appendChild(item);
     });
@@ -394,9 +397,10 @@ function renderTiendas(filtro) {
   listaTiendasEl.classList.add("show");
 }
 
-function seleccionarTienda(nombre) {
-  inputTiendaHidden.value = nombre;
-  tiendaTexto.textContent = "✅ " + nombre;
+function seleccionarTienda(t) {
+  const etiqueta = t.determinante ? (t.tienda + " · Det. " + t.determinante) : t.tienda;
+  inputTiendaHidden.value = etiqueta;
+  tiendaTexto.textContent = "✅ " + etiqueta;
   tiendaSeleccionada.classList.add("show");
   inputBuscar.value = "";
   listaTiendasEl.classList.remove("show");
@@ -432,7 +436,10 @@ async function cargarTiendas() {
   try {
     const response = await fetch(webAppUrl + "?action=getTiendas");
     const data = await response.json();
-    tiendasData = data.map(t => typeof t === "string" ? t : (t.tienda || t.nombre || String(t)));
+    tiendasData = data.map(t => typeof t === "string"
+      ? { tienda: t, determinante: "" }
+      : { tienda: t.tienda || t.nombre || "", determinante: t.determinante || "" }
+    );
   } catch (e) {
     inputBuscar.placeholder = "⚠️ Error al cargar tiendas";
     console.error("Error cargando tiendas:", e);
